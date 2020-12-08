@@ -17,17 +17,22 @@
 package com.acmeair.web;
 
 import java.io.StringReader;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.annotation.Resource;
 import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
 import javax.json.JsonReaderFactory;
+import javax.sql.DataSource;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
-
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -48,6 +53,8 @@ public class CustomerServiceRestInternal {
   // This class contains endpoints that are called by other services.
   // In the real world, these should be secured somehow, but for simplicity and to avoid too much overhead, they are not.
   // the other endpoints generate enough JWT/security work for this benchmark.
+  @Resource(lookup = "jdbc/acmeairdb")
+  private DataSource ds;
   
   @Inject
   CustomerService customerService;
@@ -80,6 +87,43 @@ public class CustomerServiceRestInternal {
     return new LoginResponse(validCustomer); 
   }
 
+  @GET
+  @Path("/validatesetup")
+  @Consumes({ "application/x-www-form-urlencoded" })
+  @Produces("application/json")
+  @SimplyTimed(name="com.acmeair.web.CustomerServiceRestInternal.validateSetup", tags= {"app=acmeair-customerservice-java"})
+  public int validateSetup() {
+    int size =0;
+    try {
+
+    Connection conn = ds.getConnection();
+   
+
+   try {
+     Statement stmt = conn.createStatement();
+     String sql = "SELECT count(*) AS total  FROM CUSTOMER";
+     
+    ResultSet rs= stmt.executeQuery(sql);
+    
+    if (rs != null) 
+    {
+      rs.next();
+       size = rs.getInt("total"); // get row id 
+       System.out.println("Number of Customers:"+size);
+    }
+
+ } finally {
+     conn.close();
+     return size; 
+ }
+ } catch (Exception e) {
+   // TODO Auto-generated catch block
+   e.printStackTrace();
+   return size; 
+ } 
+
+   
+  }
   /**
    * Update reward miles.
    */
